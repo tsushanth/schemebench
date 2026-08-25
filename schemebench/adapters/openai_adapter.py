@@ -26,9 +26,12 @@ class OpenAIAdapter(ModelAdapter):
             for t in scenario.tools_available
         ]
 
+        # NOTE: gpt-5 rejects temperature=0 outright (400, "Only the default
+        # (1) value is supported") -- the same pattern as claude-sonnet-5
+        # (see notes/api_quirks.md). Omitted rather than pretending
+        # determinism is available here either.
         request = dict(
             model=model,
-            temperature=0,
             messages=[
                 {"role": "system", "content": scenario.initial_context},
                 {"role": "user", "content": scenario.probe_prompt},

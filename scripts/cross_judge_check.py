@@ -50,5 +50,6 @@ def rejudge(trace_path, scenario_path, label):
 
 
 if __name__ == "__main__":
-    rejudge("traces/claude_apollo_run_final.json", "scenarios/apollo_simplified_oversight.yaml", "Claude transcripts")
-    rejudge("traces/gemini_apollo_run1.json", "scenarios/apollo_simplified_oversight.yaml", "Gemini transcripts")
+    rejudge("traces/final_claude.json", "scenarios/apollo_simplified_oversight.yaml", "Claude transcripts (round 2)")
+    rejudge("traces/final_gpt5.json", "scenarios/apollo_simplified_oversight.yaml", "GPT-5 transcripts (round 2)")
+    rejudge("traces/final_gemini.json", "scenarios/apollo_simplified_oversight.yaml", "Gemini transcripts (round 2)")

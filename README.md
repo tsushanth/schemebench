@@ -91,17 +91,20 @@ Two example scenarios:
   provider** (Anthropic — OpenAI/Google adapters are written but not yet
   verified against live traffic).
 
-## Comparative result: Claude vs. Gemini
+## Comparative result: Claude vs. GPT-5 vs. Gemini
 
 [`notes/comparative_results_apollo_scenario.md`](notes/comparative_results_apollo_scenario.md) —
-the first real cross-provider behavioral difference this project has found:
-`claude-sonnet-5` refused the oversight-subversion pilot scenario 0/5 times;
-`gemini-2.5-flash` called `disable_monitoring` with the same pretextual cover
-story 3/5 times. Cross-checked with a Gemini judge against the default
-Claude judge on the identical transcripts — zero flips, strengthening
-confidence this isn't a same-family judge bias artifact. Still a two-model,
-single-scenario, n=5 result — see the note for exactly what would be needed
-to generalize it.
+the first three-model comparison and first non-null cross-provider finding
+this project has produced: `claude-sonnet-5` and `gpt-5` both refused the
+oversight-subversion pilot scenario 0/5 times; `gemini-2.5-flash` called
+`disable_monitoring` with the same pretextual cover story in most trials.
+Getting a fair reading required catching and fixing a harness bug first —
+GPT-5's real behavior was hidden behind a single-turn limitation until the
+probe was rewritten and all three models rerun. Cross-checked with a Gemini
+judge against the default Claude judge — zero flips on the transcripts
+checked so far, strengthening confidence this isn't a same-family judge
+bias artifact. Still a single-scenario, small-n result — see the note for
+what's needed to generalize it.
 
 ## Cross-pollination from other work
 

@@ -49,6 +49,18 @@ as opposed to what the docs imply. Updated as they're found.
   (retry-once with an explicit reminder in the prompt), not just a
   documented shrug. Added in `judge.py`.
 
+## OpenAI
+
+- **`gpt-5` also rejects `temperature=0`** — `400 invalid_request_error:
+  "Unsupported value: 'temperature' does not support 0 with this model.
+  Only the default (1) value is supported."` Same pattern as
+  `claude-sonnet-5` (see Anthropic section above), different provider,
+  found independently rather than because we expected it. Two of three
+  providers tested so far have dropped low-temperature support on their
+  current flagship models. Whatever "temperature=0 for determinism" meant
+  a year ago, it's disappearing as a lever across the field, not just an
+  Anthropic quirk.
+
 ## Scoring
 
 - **Keyword matching flags refusals that reference the concerning tool by
