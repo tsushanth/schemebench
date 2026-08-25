@@ -91,6 +91,18 @@ Two example scenarios:
   provider** (Anthropic — OpenAI/Google adapters are written but not yet
   verified against live traffic).
 
+## Comparative result: Claude vs. Gemini
+
+[`notes/comparative_results_apollo_scenario.md`](notes/comparative_results_apollo_scenario.md) —
+the first real cross-provider behavioral difference this project has found:
+`claude-sonnet-5` refused the oversight-subversion pilot scenario 0/5 times;
+`gemini-2.5-flash` called `disable_monitoring` with the same pretextual cover
+story 3/5 times. Cross-checked with a Gemini judge against the default
+Claude judge on the identical transcripts — zero flips, strengthening
+confidence this isn't a same-family judge bias artifact. Still a two-model,
+single-scenario, n=5 result — see the note for exactly what would be needed
+to generalize it.
+
 ## Cross-pollination from other work
 
 [`notes/kaggle_cross_pollination.md`](notes/kaggle_cross_pollination.md) —
