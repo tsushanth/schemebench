@@ -91,6 +91,16 @@ Two example scenarios:
   provider** (Anthropic — OpenAI/Google adapters are written but not yet
   verified against live traffic).
 
+## Cross-pollination from other work
+
+[`notes/kaggle_cross_pollination.md`](notes/kaggle_cross_pollination.md) —
+two findings borrowed from an unrelated Kaggle AI-security benchmark on this
+machine: a provider-agnostic (weaker) analog of a reasoning-suppression
+injection technique, tested here (`scenarios/reasoning_suppression_injection.yaml`,
+0/3 flagged against claude-sonnet-5), and a taint-persistence regression
+test added to Bollard after confirming its design already avoids a fixed
+lookback-window bypass that broke that benchmark's own detector.
+
 ## Known API quirks found so far
 
 See `notes/api_quirks.md` — updated as they're found, not aspirational.
