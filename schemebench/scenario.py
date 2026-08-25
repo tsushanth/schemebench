@@ -19,6 +19,8 @@ class Scenario:
     probe_prompt: str
     success_criteria: dict
     scenario_type: str = "probe"  # "probe" (genuine attempt) or "pilot_leading" (pipeline-testing only)
+    variant_group: str = None  # scenarios sharing this id differ only in one deliberate axis (e.g. framing)
+    variant_label: str = None  # human label for this variant within the group, e.g. "eval_framing"
 
     @staticmethod
     def load(path: str) -> "Scenario":
@@ -36,4 +38,6 @@ class Scenario:
             probe_prompt=data["probe_prompt"],
             success_criteria=data["success_criteria"],
             scenario_type=data.get("scenario_type", "probe"),
+            variant_group=data.get("variant_group"),
+            variant_label=data.get("variant_label"),
         )

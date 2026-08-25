@@ -58,6 +58,27 @@ def print_details(results):
                 print(f"    tool_calls: {trace['tool_calls']}")
 
 
+def print_delta_table(variant_results):
+    print(f"\n{'Variant':<24} {'Flagged':<12} {'Rate'}")
+    print("-" * 50)
+    rates = {}
+    for label, results in variant_results:
+        for r in results:
+            if r["skipped_reason"]:
+                continue
+            s = r["summary"]
+            rate = s["flagged"] / s["scored"] if s["scored"] else 0.0
+            rates[label] = rate
+            print(f"{label:<24} {s['flagged']}/{s['scored']:<10} {rate:.0%}")
+
+    if len(rates) == 2:
+        (a_label, a_rate), (b_label, b_rate) = list(rates.items())
+        delta = a_rate - b_rate
+        print(f"\nDelta ({a_label} - {b_label}): {delta:+.0%}")
+        if abs(delta) < 0.001:
+            print("No behavioral difference detected between framings on this run.")
+
+
 def main():
     load_dotenv()
 
@@ -75,7 +96,68 @@ def main():
     run_p.add_argument("--details", action="store_true", help="Print per-trial detail, not just the summary table")
     run_p.add_argument("--out", default=None, help="Path to write full JSON trace log")
 
+    cmp_p = sub.add_parser("compare", help="Run two scenario variants (e.g. eval vs deployment framing) and diff the flagged rate")
+    cmp_p.add_argument("scenario_a", help="Path to first scenario YAML file")
+    cmp_p.add_argument("scenario_b", help="Path to second scenario YAML file")
+    cmp_p.add_argument(
+        "--models", nargs="+", default=["anthropic"],
+        help="Providers or provider:model pairs, e.g. anthropic:claude-sonnet-5",
+    )
+    cmp_p.add_argument("--trials", type=int, default=5, help="Repeat the probe N times per model per variant")
+    cmp_p.add_argument("--no-judge", action="store_true", help="Use keyword matching only, skip the LLM judge")
+    cmp_p.add_argument("--details", action="store_true", help="Print per-trial detail for both variants")
+    cmp_p.add_argument("--out", default=None, help="Path to write full JSON trace log for both variants")
+
     args = parser.parse_args()
+
+    if args.command == "compare":
+        scenario_a = Scenario.load(args.scenario_a)
+        scenario_b = Scenario.load(args.scenario_b)
+        targets = [parse_target(m) for m in args.models]
+        use_judge = not args.no_judge
+
+        if scenario_a.variant_group != scenario_b.variant_group or not scenario_a.variant_group:
+            print(
+                f"WARNING: scenarios don't share a variant_group "
+                f"({scenario_a.variant_group!r} vs {scenario_b.variant_group!r}) — "
+                f"comparing them may not isolate a single variable.\n"
+            )
+
+        label_a = scenario_a.variant_label or scenario_a.id
+        label_b = scenario_b.variant_label or scenario_b.id
+
+        print(f"Comparing: {label_a}  vs  {label_b}")
+        print(f"Trials per model per variant: {args.trials} | Scoring: {'llm_judge' if use_judge else 'keyword_match'}")
+
+        results_a = run_scenario(scenario_a, targets, trials=args.trials, use_judge=use_judge)
+        results_b = run_scenario(scenario_b, targets, trials=args.trials, use_judge=use_judge)
+
+        print(f"\n=== {label_a} ===")
+        print_comparison_table(scenario_a, results_a)
+        if args.details:
+            print_details(results_a)
+
+        print(f"\n=== {label_b} ===")
+        print_comparison_table(scenario_b, results_b)
+        if args.details:
+            print_details(results_b)
+
+        print_delta_table([(label_a, results_a), (label_b, results_b)])
+
+        if args.out:
+            out_path = Path(args.out)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(out_path, "w") as f:
+                json.dump(
+                    {
+                        "variant_group": scenario_a.variant_group,
+                        "trials": args.trials,
+                        "variants": {label_a: results_a, label_b: results_b},
+                    },
+                    f, indent=2, default=str,
+                )
+            print(f"\nFull trace written to {out_path}")
+        return
 
     if args.command == "run":
         scenario = Scenario.load(args.scenario)

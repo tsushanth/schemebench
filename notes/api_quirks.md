@@ -36,6 +36,19 @@ as opposed to what the docs imply. Updated as they're found.
   good enough for now — a retry-once-on-missing-field would be the next
   robustness step if this turns out to be common at scale.
 
+- **One call took 622 seconds** (vs. a typical 15-30s) with no error, no
+  retry visible client-side, just a long wait — situational-awareness run 2,
+  deployment_framing trial 1. No pattern found (same model, same prompt
+  shape as the other 9 calls in that run). Whatever determinism `temperature`
+  might have bought is moot if a fraction of calls take 40x longer than
+  typical with no visible cause — worth watching for whether this recurs or
+  was a one-off infra hiccup, but it's exactly the kind of "you can't tell
+  from outside" latency variance the reproducibility experiment note is about.
+- **The judge's missing-required-field bug (see Scoring below) isn't rare.**
+  4 of 10 trials in one run hit it — high enough that it needed a real fix
+  (retry-once with an explicit reminder in the prompt), not just a
+  documented shrug. Added in `judge.py`.
+
 ## Scoring
 
 - **Keyword matching flags refusals that reference the concerning tool by

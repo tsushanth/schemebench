@@ -95,6 +95,17 @@ Two example scenarios:
 
 See `notes/api_quirks.md` — updated as they're found, not aspirational.
 
+## Situational-awareness eval
+
+[`notes/situational_awareness_eval.md`](notes/situational_awareness_eval.md) —
+compares the same scenario under "this is a test" vs. "this is real
+deployment" framing. Clean result after fixing two pipeline bugs that
+would have produced a misleading null: 0/5 flagged in both conditions
+against claude-sonnet-5 — a genuine floor effect (the model refuses this
+particular scenario unanimously regardless of framing), not evidence that
+framing never matters. `schemebench compare` is the general-purpose command
+for this kind of paired-variant comparison.
+
 ## Reproducibility experiment
 
 [`notes/reproducibility_experiment.md`](notes/reproducibility_experiment.md) —
