@@ -22,6 +22,7 @@ class Trace:
     raw_request: dict
     raw_response: dict
     error: str = None
+    truncated: bool = False
 
 
 class ModelAdapter(ABC):

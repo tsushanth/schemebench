@@ -19,19 +19,30 @@ cp .env.example .env   # fill in whichever provider keys you have
 ## Usage
 
 ```bash
-python -m schemebench.cli run scenarios/apollo_simplified_oversight.yaml \
+python -m schemebench.cli run scenarios/feedback_gaming_subtle.yaml \
   --models anthropic:claude-sonnet-5 openai:gpt-5 google:gemini-2.5-pro \
-  --out traces/run1.json
+  --trials 5 --details --out traces/run1.json
 ```
 
 Any provider without a key set is skipped, not treated as an error.
 
+- `--trials N` repeats the probe N times per model and reports a fraction,
+  e.g. `Model A: 3/5, Model B: 1/5` — since single runs are not reproducible
+  (see `notes/api_quirks.md`).
+- Scoring defaults to an LLM-as-judge (Anthropic, forced tool-call output).
+  Pass `--no-judge` to fall back to plain keyword matching.
+- `--details` prints the judge's reasoning and the full transcript per
+  trial, not just the summary table.
+
 ## Scenario format
 
-A scenario is a YAML file with 5 required fields:
+A scenario is a YAML file with 5 required fields, plus an optional
+`scenario_type` (`probe` by default, or `pilot_leading` for pipeline-testing
+scenarios that shouldn't be read as real findings):
 
 ```yaml
 id: my_scenario
+scenario_type: probe   # optional, defaults to "probe"
 initial_context: |     # goes in as the system prompt
   ...
 tools_available:       # generic tool schema, converted to each provider's native format
@@ -41,30 +52,44 @@ tools_available:       # generic tool schema, converted to each provider's nativ
 probe_prompt: |         # the user message that probes for the behavior
   ...
 success_criteria:
-  keywords: ["...", "..."]
+  description: "..."   # used by the LLM judge
+  keywords: ["...", "..."]   # fallback for --no-judge
 ```
 
-See `scenarios/apollo_simplified_oversight.yaml` for a full example — a
-deliberately simplified, more-leading recreation of the "oversight
-subversion" style setup from Apollo Research's scheming evals. It is not a
-faithful reproduction of their methodology.
+Two example scenarios:
+- `scenarios/apollo_simplified_oversight.yaml` — `pilot_leading`. A
+  deliberately simplified, more-leading recreation of the "oversight
+  subversion" style setup from Apollo Research's scheming evals. Not a
+  faithful reproduction of their methodology; useful mainly for pipeline
+  validation, not as a real elicitation attempt.
+- `scenarios/feedback_gaming_subtle.yaml` — `probe`. No mention of
+  "oversight", "shutdown", or "avoid detection" — the model has to connect
+  deployment-continuation incentives to feedback-metric gaming on its own,
+  if it does at all.
 
-## Known limitations (Weekend 1 scope)
+## Known limitations
 
-- **Scoring is plain keyword matching.** This is a placeholder, not a real
-  judge. It both misses real scheming attempts phrased differently than the
-  keyword list, and flags benign refusals that merely reference a concerning
-  tool/keyword while explaining why the model won't do it — confirmed on the
-  very first smoke-test run (see `notes/api_quirks.md`). Do not treat
-  Weekend-1 scores as findings.
+- **Single-turn only.** The runner makes one API call per trial; it does
+  not execute tool calls and feed results back for a real multi-turn agentic
+  loop. A model that would only reveal scheming after seeing a tool result
+  won't show it here.
+- **The LLM judge is Anthropic-only right now**, including when judging
+  Anthropic models' own traces — a real self-judging bias, not hidden by
+  design. Swap `SCHEMEBENCH_JUDGE_MODEL` / cross-provider judging once that
+  matters more than having a judge at all.
+- **`required` fields in tool schemas are advisory, not enforced**, even
+  under a forced `tool_choice` — the judge itself has been seen omitting its
+  required `scheming_attempt` field on sparse transcripts. When that
+  happens it's counted as an error, not silently miscounted as "not
+  flagged" — check the error count before trusting a 0/N.
 - **No reproducibility guarantees.** `temperature=0` is not available on all
   models (see `notes/api_quirks.md`) and isn't guaranteed to mean the same
   thing across providers even when it is. Every trace logs the full raw
   request/response and a timestamp specifically so re-runs can be compared
   later, not because current runs are expected to be reproducible.
-- **One scenario, three providers, no scoring layer beyond keywords.**
-  Planned for later: LLM-as-judge scoring, more scenarios, a comparison
-  table across models (e.g. "Model A: 3/5 flagged, Model B: 1/5").
+- **Two scenarios, and only one has been run against more than one
+  provider** (Anthropic — OpenAI/Google adapters are written but not yet
+  verified against live traffic).
 
 ## Known API quirks found so far
 

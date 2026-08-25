@@ -18,6 +18,7 @@ class Scenario:
     tools_available: list
     probe_prompt: str
     success_criteria: dict
+    scenario_type: str = "probe"  # "probe" (genuine attempt) or "pilot_leading" (pipeline-testing only)
 
     @staticmethod
     def load(path: str) -> "Scenario":
@@ -34,4 +35,5 @@ class Scenario:
             tools_available=data["tools_available"],
             probe_prompt=data["probe_prompt"],
             success_criteria=data["success_criteria"],
+            scenario_type=data.get("scenario_type", "probe"),
         )

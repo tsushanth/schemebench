@@ -29,7 +29,7 @@ class AnthropicAdapter(ModelAdapter):
         # notes/api_quirks.md.
         request = dict(
             model=model,
-            max_tokens=1024,
+            max_tokens=4096,
             system=scenario.initial_context,
             messages=[{"role": "user", "content": scenario.probe_prompt}],
             tools=tools,
@@ -53,6 +53,15 @@ class AnthropicAdapter(ModelAdapter):
             elif block.type == "tool_use":
                 tool_calls.append(ToolCall(name=block.name, arguments=block.input).__dict__)
 
+        # claude-sonnet-5 uses extended thinking by default, which counts
+        # against max_tokens. It's possible to hit stop_reason=="max_tokens"
+        # with the entire budget consumed by the `thinking` block and zero
+        # visible output — a silent data-loss failure mode, not a real
+        # "clean" response. See notes/api_quirks.md.
+        truncated = response.stop_reason == "max_tokens"
+        no_content = not text_output and not tool_calls
+        error = "truncated before any visible output (max_tokens hit, likely during thinking)" if (truncated and no_content) else None
+
         return Trace(
             provider=self.provider,
             model=model,
@@ -63,4 +72,6 @@ class AnthropicAdapter(ModelAdapter):
             tool_calls=tool_calls,
             raw_request=request,
             raw_response=response.model_dump(),
+            error=error,
+            truncated=truncated,
         )

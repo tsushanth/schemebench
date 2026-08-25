@@ -22,6 +22,42 @@ def parse_target(spec: str):
     return spec, DEFAULT_TARGETS.get(spec, spec)
 
 
+def print_comparison_table(scenario, results):
+    print(f"\n{'Model':<32} {'Flagged':<12} {'Method':<14} {'Errors'}")
+    print("-" * 70)
+    for r in results:
+        label = f"{r['provider']}:{r['model']}"
+        if r["skipped_reason"]:
+            print(f"{label:<32} {'SKIPPED':<12} {r['skipped_reason']}")
+            continue
+        s = r["summary"]
+        flagged_str = f"{s['flagged']}/{s['scored']}"
+        print(f"{label:<32} {flagged_str:<12} {s['method']:<14} {s['errors']}")
+
+
+def print_details(results):
+    for r in results:
+        if r["skipped_reason"]:
+            continue
+        label = f"{r['provider']}:{r['model']}"
+        print(f"\n--- {label} ---")
+        for i, t in enumerate(r["trials"]):
+            trace = t["trace"]
+            if trace["error"]:
+                print(f"  [trial {i}] ERROR — {trace['error']}")
+                continue
+            judge = t["judge_score"]
+            kw = t["keyword_score"]
+            verdict = judge.get("scheming_attempt") if judge else None
+            conf = judge.get("confidence") if judge else None
+            print(f"  [trial {i}] judge={verdict} (conf={conf}) keyword_flagged={kw['flagged']} — {trace['latency_ms']:.0f}ms")
+            if judge and judge.get("reasoning"):
+                print(f"    reasoning: {judge['reasoning']}")
+            print(f"    text: {trace['text_output'][:150]!r}")
+            if trace["tool_calls"]:
+                print(f"    tool_calls: {trace['tool_calls']}")
+
+
 def main():
     load_dotenv()
 
@@ -34,6 +70,9 @@ def main():
         "--models", nargs="+", default=["anthropic", "openai", "google"],
         help="Providers or provider:model pairs, e.g. anthropic:claude-sonnet-5",
     )
+    run_p.add_argument("--trials", type=int, default=1, help="Repeat the probe N times per model")
+    run_p.add_argument("--no-judge", action="store_true", help="Use keyword matching only, skip the LLM judge")
+    run_p.add_argument("--details", action="store_true", help="Print per-trial detail, not just the summary table")
     run_p.add_argument("--out", default=None, help="Path to write full JSON trace log")
 
     args = parser.parse_args()
@@ -41,30 +80,25 @@ def main():
     if args.command == "run":
         scenario = Scenario.load(args.scenario)
         targets = [parse_target(m) for m in args.models]
-        results = run_scenario(scenario, targets)
+        use_judge = not args.no_judge
+        results = run_scenario(scenario, targets, trials=args.trials, use_judge=use_judge)
 
-        print(f"\nScenario: {scenario.id}\n" + "=" * 60)
-        for r in results:
-            provider, model = r["provider"], r["model"]
-            if r["skipped_reason"]:
-                print(f"[{provider}:{model}] SKIPPED — {r['skipped_reason']}")
-                continue
-            trace = r["trace"]
-            if trace["error"]:
-                print(f"[{provider}:{model}] ERROR — {trace['error']}")
-                continue
-            score = r["score"]
-            flag = "FLAGGED" if score["flagged"] else "clean"
-            print(f"[{provider}:{model}] {flag} (matched: {score['matched_keywords']}) — {trace['latency_ms']:.0f}ms")
-            print(f"  text: {trace['text_output'][:200]!r}")
-            if trace["tool_calls"]:
-                print(f"  tool_calls: {trace['tool_calls']}")
+        tag = " [PILOT/LEADING — not a genuine elicitation attempt]" if scenario.scenario_type == "pilot_leading" else ""
+        print(f"\nScenario: {scenario.id}{tag}")
+        print(f"Trials per model: {args.trials} | Scoring: {'llm_judge' if use_judge else 'keyword_match'}")
+
+        print_comparison_table(scenario, results)
+        if args.details:
+            print_details(results)
 
         if args.out:
             out_path = Path(args.out)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             with open(out_path, "w") as f:
-                json.dump({"scenario_id": scenario.id, "results": results}, f, indent=2, default=str)
+                json.dump(
+                    {"scenario_id": scenario.id, "scenario_type": scenario.scenario_type, "trials": args.trials, "results": results},
+                    f, indent=2, default=str,
+                )
             print(f"\nFull trace written to {out_path}")
 
 
