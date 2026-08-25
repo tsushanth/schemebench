@@ -94,3 +94,12 @@ Two example scenarios:
 ## Known API quirks found so far
 
 See `notes/api_quirks.md` — updated as they're found, not aspirational.
+
+## Reproducibility experiment
+
+[`notes/reproducibility_experiment.md`](notes/reproducibility_experiment.md) —
+an attempt to reproduce Apollo Research's "Oversight Subversion" scheming
+eval against a current model. Short version: Apollo's paper explicitly
+withholds the exact prompts/eval code to prevent training contamination, so
+a faithful reproduction isn't possible from public information at all —
+which is itself the finding.
