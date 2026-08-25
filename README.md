@@ -91,6 +91,37 @@ Two example scenarios:
   provider** (Anthropic — OpenAI/Google adapters are written but not yet
   verified against live traffic).
 
+## Weekly drift check (continuous eval)
+
+`.github/workflows/weekly-eval-drift.yml` runs every Monday: the three
+standalone tracked scenarios (`apollo_simplified_oversight`,
+`feedback_gaming_subtle`, `reasoning_suppression_injection`) against all
+three providers, 5 trials each, appended to `results/history.jsonl`.
+`scripts/drift_check.py` then compares that week's flagged-rate per
+(scenario, provider, model) against the historical mean and files a GitHub
+issue if any group moved by more than 30 percentage points.
+
+**Why weekly, not nightly:** this runs real, unattended, recurring spend
+across three paid providers. Scenarios don't change day to day, so nightly
+buys faster drift detection at ~7x the cost for not much added signal.
+**Why drift, not raw automation:** the point isn't "run it a lot" — it's
+catching what you can't catch by hand: a provider silently changing a
+flagship model's behavior between versions. Two of three providers have
+already deprecated `temperature=0` on their current models with no
+announcement (see `notes/api_quirks.md`); a scheming-propensity shift of
+similar size, sitting undetected for months, is exactly the failure mode
+this exists to catch.
+
+**Setup:** add `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY` as
+repository secrets (Settings → Secrets and variables → Actions). Trigger a
+manual run from the Actions tab (`workflow_dispatch`) to seed the first
+data point — drift can't be detected against a history of zero.
+
+**Known limitation:** the 30-point drift threshold and 3-provider default
+models are a starting guess, not tuned against real week-over-week
+variance yet — there isn't enough history to tune it against. Expect to
+revisit both once a few months of `results/history.jsonl` exist.
+
 ## Comparative result: Claude vs. GPT-5 vs. Gemini
 
 [`notes/comparative_results_apollo_scenario.md`](notes/comparative_results_apollo_scenario.md) —

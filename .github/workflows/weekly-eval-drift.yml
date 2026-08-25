@@ -1,0 +1,53 @@
+name: Weekly eval drift check
+
+on:
+  schedule:
+    - cron: "0 13 * * 1" # Mondays, 13:00 UTC
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  drift-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scenarios against all three providers
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: python scripts/run_all_scenarios.py
+
+      - name: Check for drift against historical rates
+        id: drift
+        continue-on-error: true
+        run: python scripts/drift_check.py
+
+      - name: Commit results
+        run: |
+          git config user.name "schemebench-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add results/history.jsonl results/latest_drift_report.md
+          git diff --cached --quiet || git commit -m "Weekly eval drift check: $(date -u +%Y-%m-%d)"
+          git push
+
+      - name: File an issue if drift was detected
+        if: steps.drift.outcome == 'failure'
+        run: |
+          gh issue create \
+            --title "Eval drift detected: $(date -u +%Y-%m-%d)" \
+            --body-file results/latest_drift_report.md \
+            --label "drift"
+        env:
+          GH_TOKEN: ${{ github.token }}
