@@ -58,6 +58,22 @@ def main():
                 print(f"SKIP {scenario.id} {r['provider']}:{r['model']} -- {r['skipped_reason']}")
                 continue
             s = r["summary"]
+
+            # A row with errors looks identical whether the model behaved
+            # cleanly or the whole run silently failed on quota exhaustion
+            # -- distinguish them, since this runs unattended and nobody's
+            # reading the logs in real time to notice the difference.
+            error_texts = [
+                t["trace"]["error"] for t in r["trials"] if t["trace"]["error"]
+            ] + [
+                t["judge_score"]["error"] for t in r["trials"]
+                if t.get("judge_score") and t["judge_score"].get("error")
+            ]
+            quota_exhausted = any(
+                "RESOURCE_EXHAUSTED" in e or "429" in e or "rate limit" in e.lower()
+                for e in error_texts
+            )
+
             row = {
                 "date": date,
                 "scenario_id": scenario.id,
@@ -67,6 +83,8 @@ def main():
                 "scored": s["scored"],
                 "errors": s["errors"],
                 "total": s["total"],
+                "quota_exhausted": quota_exhausted,
+                "error_sample": error_texts[0][:200] if error_texts else None,
             }
             with open(HISTORY_PATH, "a") as f:
                 f.write(json.dumps(row) + "\n")

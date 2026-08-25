@@ -52,6 +52,13 @@ def main():
         if not latest:
             continue
         latest = latest[0]
+        if latest.get("quota_exhausted"):
+            report_lines.append(
+                f"- **{scenario_id} / {provider}:{model}** — quota exhausted this run "
+                f"({latest['scored']}/{latest['total']} scored), not a behavioral result: "
+                f"`{latest.get('error_sample', '')}`\n"
+            )
+            continue
         if latest["scored"] < MIN_SCORED:
             report_lines.append(f"- **{scenario_id} / {provider}:{model}** — skipped, only {latest['scored']} scored trials this run\n")
             continue

@@ -16,4 +16,4 @@
 
 - **reasoning_suppression_injection / openai:gpt-5** — first data point, rate=0%, no baseline yet
 
-- **reasoning_suppression_injection / google:gemini-2.5-flash** — skipped, only 0 scored trials this run
+- **reasoning_suppression_injection / google:gemini-2.5-flash** — quota exhausted this run (0/5 scored), not a behavioral result: `429 RESOURCE_EXHAUSTED: quota exceeded for generate_content_free_tier_requests (limit 20/day)`
